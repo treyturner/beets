@@ -24,6 +24,7 @@ https://gist.github.com/1241307
 
 import codecs
 import os
+import re
 import traceback
 from collections import defaultdict
 from typing import Union
@@ -312,11 +313,14 @@ class LastGenrePlugin(plugins.BeetsPlugin):
         min_weight = self.config["min_weight"].get(int)
         return self._tags_for(lastfm_obj, min_weight)
 
-    def _filter_valid_genres(self, genres: list[str]) -> list[str]:
-        """Filter list of genres, only keep valid."""
+    def _filter_valid_genres(self, genres: list[str], artist: str = "") -> list[str]:
+        """Filter list of genres, only keep valid and not forbidden."""
         if not genres:
             return []
-        return [x for x in genres if self._is_valid(x)]
+        return [
+            x for x in genres
+            if self._is_valid(x) and not self._is_forbidden(x, artist)
+        ]
 
     def _is_valid(self, genre: str) -> bool:
         """Check if the genre is valid.
@@ -326,6 +330,40 @@ class LastGenrePlugin(plugins.BeetsPlugin):
         """
         if genre and (not self.whitelist or genre.lower() in self.whitelist):
             return True
+        return False
+
+    def _is_forbidden(self, genre: str, artist: str) -> bool:
+        """Return True if the genre is forbidden for the artist.
+
+        Supports a special '*' key in the blacklist for
+        global forbidden genres.
+
+        Example blacklist file format:
+            Artist Name:
+                pop
+                rock
+            *:
+                spoken word
+        """
+        if not self.blacklist:
+            return False
+
+        genre = genre.lower()
+
+        # Check global forbidden patterns
+        if "*" in self.blacklist:
+            for pattern in self.blacklist["*"]:
+                if re.search(pattern, genre):
+                    return True
+
+        # Check artist-specific forbidden patterns
+        if artist:
+            artist = artist.lower()
+            if artist in self.blacklist:
+                for pattern in self.blacklist[artist]:
+                    if re.search(pattern, genre):
+                        return True
+
         return False
 
     # Cached last.fm entity lookups.
@@ -358,25 +396,29 @@ class LastGenrePlugin(plugins.BeetsPlugin):
         return self._filter_valid_genres(
             self._last_lookup(
                 "album", LASTFM.get_album, obj.albumartist, obj.album
-            )
+            ),
+            artist=obj.albumartist
         )
 
     def fetch_album_artist_genre(self, obj):
         """Return the album artist genre for this Item or Album."""
         return self._filter_valid_genres(
-            self._last_lookup("artist", LASTFM.get_artist, obj.albumartist)
+            self._last_lookup("artist", LASTFM.get_artist, obj.albumartist),
+            artist=obj.albumartist
         )
 
     def fetch_artist_genre(self, item):
         """Returns the track artist genre for this Item."""
         return self._filter_valid_genres(
-            self._last_lookup("artist", LASTFM.get_artist, item.artist)
+            self._last_lookup("artist", LASTFM.get_artist, item.artist),
+            artist=item.artist
         )
 
     def fetch_track_genre(self, obj):
         """Returns the track genre for this Item."""
         return self._filter_valid_genres(
-            self._last_lookup("track", LASTFM.get_track, obj.artist, obj.title)
+            self._last_lookup("track", LASTFM.get_track, obj.artist, obj.title),
+            artist=obj.artist
         )
 
     # Main processing: _get_genre() and helpers.
