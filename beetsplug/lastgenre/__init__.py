@@ -188,14 +188,14 @@ class LastGenrePlugin(plugins.BeetsPlugin):
                 line = line.decode("utf-8").lower()
                 if not line.strip() or line.lstrip().startswith("#"):
                     continue
-                if not line.startswith(' '):
+                if not line.startswith(" "):
                     # Section header
-                    if not line.rstrip().endswith(':'):
+                    if not line.rstrip().endswith(":"):
                         raise UserError(
                             f"Malformed blacklist section header "
                             f"at line {lineno}: {line}"
                         )
-                    section = line.rstrip(':\r\n')
+                    section = line.rstrip(":\r\n")
                 else:
                     # Pattern line: must be indented (at least one space)
                     if section is None:
@@ -203,9 +203,7 @@ class LastGenrePlugin(plugins.BeetsPlugin):
                             f"Blacklist regex pattern line before any section header "
                             f"at line {lineno}: {line}"
                         )
-                    blacklist[section].append(
-                        line.strip()
-                    )
+                    blacklist[section].append(line.strip())
         if self.config["extended_debug"]:
             self._log.debug("Blacklist: {}", blacklist)
 
@@ -220,7 +218,9 @@ class LastGenrePlugin(plugins.BeetsPlugin):
                 except re.error:
                     # If it fails, escape it and treat as literal string
                     escaped_pattern = re.escape(pattern)
-                    compiled_patterns.append(re.compile(escaped_pattern, re.IGNORECASE))
+                    compiled_patterns.append(
+                        re.compile(escaped_pattern, re.IGNORECASE)
+                    )
             compiled_blacklist[artist] = compiled_patterns
         return compiled_blacklist
 
@@ -327,12 +327,15 @@ class LastGenrePlugin(plugins.BeetsPlugin):
         min_weight = self.config["min_weight"].get(int)
         return self._tags_for(lastfm_obj, min_weight)
 
-    def _filter_valid_genres(self, genres: list[str], artist: str = "") -> list[str]:
+    def _filter_valid_genres(
+        self, genres: list[str], artist: str = ""
+    ) -> list[str]:
         """Filter list of genres, only keep valid and not forbidden."""
         if not genres:
             return []
         return [
-            x for x in genres
+            x
+            for x in genres
             if self._is_valid(x) and not self._is_forbidden(x, artist)
         ]
 
@@ -411,28 +414,28 @@ class LastGenrePlugin(plugins.BeetsPlugin):
             self._last_lookup(
                 "album", LASTFM.get_album, obj.albumartist, obj.album
             ),
-            artist=obj.albumartist
+            artist=obj.albumartist,
         )
 
     def fetch_album_artist_genre(self, obj):
         """Return the album artist genre for this Item or Album."""
         return self._filter_valid_genres(
             self._last_lookup("artist", LASTFM.get_artist, obj.albumartist),
-            artist=obj.albumartist
+            artist=obj.albumartist,
         )
 
     def fetch_artist_genre(self, item):
         """Returns the track artist genre for this Item."""
         return self._filter_valid_genres(
             self._last_lookup("artist", LASTFM.get_artist, item.artist),
-            artist=item.artist
+            artist=item.artist,
         )
 
     def fetch_track_genre(self, obj):
         """Returns the track genre for this Item."""
         return self._filter_valid_genres(
             self._last_lookup("track", LASTFM.get_track, obj.artist, obj.title),
-            artist=obj.artist
+            artist=obj.artist,
         )
 
     # Main processing: _get_genre() and helpers.
