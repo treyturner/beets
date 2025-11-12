@@ -246,6 +246,28 @@ def add_item(
             ("Alice", "Song 1 feat. Bob"),
             id="skip-if-artist-and-album-artists-is-the-same-matching-match-b",
         ),
+        # ---- titles with brackets/parentheses ----
+        pytest.param(
+            {"format": "ft. {}"},
+            ("ftintitle",),
+            ("Alice ft. Bob", "Song 1 (Carol Remix)", "Alice"),
+            ("Alice", "Song 1 ft. Bob (Carol Remix)"),
+            id="title-with-brackets-insert-before",
+        ),
+        pytest.param(
+            {"format": "ft. {}", "keep_in_artist": True},
+            ("ftintitle",),
+            ("Alice ft. Bob", "Song 1 (Carol Remix)", "Alice"),
+            ("Alice ft. Bob", "Song 1 ft. Bob (Carol Remix)"),
+            id="title-with-brackets-keep-in-artist",
+        ),
+        pytest.param(
+            {"format": "ft. {}"},
+            ("ftintitle",),
+            ("Alice ft. Bob", "Song 1 (Remix) [Carol]", "Alice"),
+            ("Alice", "Song 1 ft. Bob (Remix) [Carol]"),
+            id="title-with-multiple-brackets-uses-first",
+        ),
     ],
 )
 def test_ftintitle_functional(

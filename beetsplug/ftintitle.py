@@ -208,7 +208,20 @@ class FtInTitlePlugin(plugins.BeetsPlugin):
         if not drop_feat and not contains_feat(item.title, custom_words):
             feat_format = self.config["format"].as_str()
             new_format = feat_format.format(feat_part)
-            new_title = f"{item.title} {new_format}"
+            # Insert before the first opening parenthesis/bracket/brace
+            bracket_chars = ["(", "[", "<"]
+            bracket_positions = [
+                item.title.find(char) for char in bracket_chars
+            ]
+            # Filter out -1 (not found) and find the minimum position
+            valid_positions = [pos for pos in bracket_positions if pos != -1]
+            if valid_positions:
+                paren_pos = min(valid_positions)
+                title_before = item.title[:paren_pos].rstrip()
+                title_after = item.title[paren_pos:]
+                new_title = f"{title_before} {new_format} {title_after}"
+            else:
+                new_title = f"{item.title} {new_format}"
             self._log.info("title: {.title} -> {}", item, new_title)
             item.title = new_title
 
